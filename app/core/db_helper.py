@@ -24,4 +24,4 @@ async def get_async_psql_session() -> AsyncGenerator[AsyncSession]:
         yield session
 
 
-db_helper = DatabaseHelper(url=settings.get_database_URL, echo=settings.PG_ECHO)
+db_helper = DatabaseHelper(url=settings.db.get_database_URL, echo=settings.db.echo)
