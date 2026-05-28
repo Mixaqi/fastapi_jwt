@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import Any
 
+from jwt import InvalidTokenError
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +11,7 @@ from app.core.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    decode_token,
     hash_password,
     verify_password,
 )
@@ -29,6 +31,9 @@ class AuthService:
         self.db: AsyncSession = db_session
         self.redis: Redis = redis_client
 
+    def _get_redis_key(self, user_id: int | str) -> str:
+        return f"refresh_token:{user_id}"
+
     async def _get_default_role(self) -> RoleModel:
         role_query = await self.db.execute(
             select(RoleModel).where(RoleModel.title == Role.USER)
@@ -41,24 +46,21 @@ class AuthService:
         return default_role
 
     async def _create_user_session(self, user: UserModel) -> TokenInfo:
-        token_payload: dict[str, Any] = {"sub": str(user.id), "email": user.email}
-        access_token: str = create_access_token(data=token_payload)
-        refresh_token: str = create_refresh_token(data=token_payload)
+        access_payload: dict[str, Any] = {"sub": str(user.id), "email": user.email}
+        refresh_payload: dict[str, Any] = {"sub": str(user.id)}
 
-        redis_key: str = f"refresh_token:{user.id}"
-        expire_seconds: int = int(
-            timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS).total_seconds()
-        )
+        access_token: str = create_access_token(data=access_payload)
+        refresh_token: str = create_refresh_token(data=refresh_payload)
 
+        redis_key: str = self._get_redis_key(user.id)
         await self.redis.set(
             name=redis_key,
             value=refresh_token,
-            ex=expire_seconds,
+            ex=int(timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS).total_seconds()),
         )
         return TokenInfo(access_token=access_token, refresh_token=refresh_token)
 
     async def register_user(self, user_data: CreateUser) -> UserModel:
-
         default_role = await self._get_default_role()
 
         new_user: UserModel = UserModel(
@@ -89,6 +91,35 @@ class AuthService:
 
         if not user or not verify_password(login_data.password, user.hashed_password):
             raise InvalidCredentialsError("Incorrect email or password")
+
+        if not user.is_active:
+            raise UserInactiveError("User account is deactivated")
+
+        return await self._create_user_session(user)
+
+    async def refresh_tokens(self, refresh_token: str) -> TokenInfo:
+        payload: dict[str, Any] | None = decode_token(refresh_token, is_refresh=True)
+
+        if payload is None:
+            raise InvalidTokenError("Invalid or expired refresh token")
+
+        user_id: int | None = payload.get("sub")
+        if not user_id:
+            raise InvalidTokenError("Invalid token payload")
+
+        redis_key: str = self._get_redis_key(user_id)
+        saved_refresh_token: str = await self.redis.get(redis_key)
+
+        if not saved_refresh_token or str(saved_refresh_token) != refresh_token:
+            raise InvalidTokenError("Refresh token has been revoked or expired")
+
+        user_query = await self.db.execute(
+            select(UserModel).where(UserModel.id == int(user_id))
+        )
+        user: UserModel | None = user_query.scalar_one_or_none()
+
+        if not user:
+            raise InvalidCredentialsError("User not found")
 
         if not user.is_active:
             raise UserInactiveError("User account is deactivated")

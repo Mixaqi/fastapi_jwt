@@ -65,3 +65,5 @@ def decode_token(token: str, is_refresh: bool = False) -> dict[str, Any] | None:
         return None
     except InvalidTokenError:
         return None
+    except Exception:
+        return None

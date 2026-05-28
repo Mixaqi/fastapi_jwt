@@ -18,3 +18,7 @@ class UserInactiveError(AuthError):
 
 class DefaultRoleNotFoundError(AuthError):
     pass
+
+
+class InvalidTokenError(AuthError):
+    pass
