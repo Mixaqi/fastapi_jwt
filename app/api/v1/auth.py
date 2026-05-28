@@ -2,17 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.exceptions import (
+from app.core.db_helper import get_async_psql_session
+from app.core.redis_helper import get_redis_client
+from app.models.user import UserModel
+from app.schemas.auth import CreateUser, TokenInfo, UserLogin, UserSchema
+from app.services.auth import AuthService
+from app.services.exceptions import (
     DefaultRoleNotFoundError,
     InvalidCredentialsError,
     UserAlreadyExistsError,
     UserInactiveError,
 )
-from app.auth.utils.main_functions import AuthService
-from app.core.db_helper import get_async_psql_session
-from app.core.redis_helper import get_redis_client
-from app.models.user import UserModel
-from app.schemas.auth import CreateUser, TokenInfo, UserLogin, UserSchema
 
 
 router: APIRouter = APIRouter(prefix="/auth", tags=["Auth"])
