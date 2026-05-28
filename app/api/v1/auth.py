@@ -22,7 +22,6 @@ def get_auth_service(
     db_session: AsyncSession = Depends(get_async_psql_session),
     redis_client: Redis = Depends(get_redis_client),
 ) -> AuthService:
-    """Провайдер зависимостей для сборки сервиса."""
     return AuthService(db_session=db_session, redis_client=redis_client)
 
 
@@ -30,7 +29,7 @@ def get_auth_service(
     "/register",
     response_model=UserSchema,
     status_code=status.HTTP_201_CREATED,
-    summary="Регистрация пользователя",
+    summary="Register user",
 )
 async def register(
     user_data: CreateUser,
@@ -50,7 +49,7 @@ async def register(
     "/login",
     response_model=TokenInfo,
     status_code=status.HTTP_200_OK,
-    summary="Вход в систему",
+    summary="Login user",
 )
 async def login(
     login_data: UserLogin,
