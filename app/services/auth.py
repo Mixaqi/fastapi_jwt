@@ -132,7 +132,7 @@ class AuthService:
             payload: dict[str, Any] = decode(
                 refresh_token,
                 settings.JWT_REFRESH_SECRET_KEY,
-                algorithms=["HS256"],
+                algorithms=[settings.JWT_ALGORITHM],
                 options={"verify_exp": False},
             )
 

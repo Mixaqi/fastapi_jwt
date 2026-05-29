@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.dependencies import get_current_user
 from app.core.db_helper import get_async_psql_session
 from app.core.redis_helper import get_redis_client
 from app.models.user import UserModel
@@ -96,3 +97,8 @@ async def logout(
     auth_service: AuthService = Depends(get_auth_service),
 ) -> None:
     await auth_service.logout(refresh_token=refresh_data.refresh_token)
+
+
+@router.get("/me", response_model=UserSchema, status_code=status.HTTP_200_OK)
+async def get_me(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+    return current_user
