@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Any
 
-from jwt import InvalidTokenError
+from jwt import DecodeError, decode
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +21,7 @@ from app.schemas.auth import CreateUser, TokenInfo, UserLogin
 from app.services.exceptions import (
     DefaultRoleNotFoundError,
     InvalidCredentialsError,
+    InvalidTokenError,
     UserAlreadyExistsError,
     UserInactiveError,
 )
@@ -125,3 +126,24 @@ class AuthService:
             raise UserInactiveError("User account is deactivated")
 
         return await self._create_user_session(user)
+
+    async def logout(self, refresh_token: str) -> None:
+        try:
+            payload: dict[str, Any] = decode(
+                refresh_token,
+                settings.JWT_REFRESH_SECRET_KEY,
+                algorithms=["HS256"],
+                options={"verify_exp": False},
+            )
+
+            user_id: str | None = payload.get("sub")
+
+            if user_id:
+                redis_key: str = self._get_redis_key(user_id)
+                await self.redis.delete(redis_key)
+
+        except DecodeError:
+            raise InvalidTokenError("Invalid token format")
+
+        except Exception:
+            pass

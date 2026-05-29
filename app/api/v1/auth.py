@@ -84,3 +84,15 @@ async def refresh(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error))
     except UserInactiveError as error:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error))
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Logout user and revoke refresh token",
+)
+async def logout(
+    refresh_data: UserRefresh,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> None:
+    await auth_service.logout(refresh_token=refresh_data.refresh_token)
