@@ -1,4 +1,3 @@
-# alembic/versions/xxxx_seed_roles.py
 from typing import Sequence, Union
 
 from alembic import op

@@ -7,16 +7,21 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
-class RedisConfig(BaseSettings):
+class AppBaseSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        extra="ignore",
+    )
+
+
+class RedisConfig(AppBaseSettings):
     host: str = "localhost"
     port: int = 6379
     db_cache: int = 0
     echo: bool = False
 
     model_config = SettingsConfigDict(
-        env_file=BASE_DIR / ".env",
         env_prefix="REDIS_",
-        extra="ignore",
     )
 
     @property
@@ -24,7 +29,7 @@ class RedisConfig(BaseSettings):
         return f"redis://{self.host}:{self.port}/{self.db_cache}"
 
 
-class DatabaseConfig(BaseSettings):
+class DatabaseConfig(AppBaseSettings):
     name: str = ""
     user: str = ""
     password: str = ""
@@ -33,9 +38,7 @@ class DatabaseConfig(BaseSettings):
     echo: bool = False
 
     model_config = SettingsConfigDict(
-        env_file=BASE_DIR / ".env",
         env_prefix="PG_",
-        extra="ignore",
     )
 
     @property
@@ -43,12 +46,7 @@ class DatabaseConfig(BaseSettings):
         return f"postgresql+psycopg_async://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=BASE_DIR / ".env",
-        extra="ignore",
-    )
-
+class Settings(AppBaseSettings):
     JWT_SECRET_KEY: str = "jwt_secret_key"
     JWT_REFRESH_SECRET_KEY: str = "jwt_refresh_secret_key"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

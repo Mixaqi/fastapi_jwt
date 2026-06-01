@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from bcrypt import checkpw, gensalt, hashpw
-from jwt import ExpiredSignatureError, InvalidTokenError, decode, encode
+from jwt import PyJWTError, decode, encode
 
 from app.core.config import settings
 
@@ -61,9 +61,5 @@ def decode_token(token: str, is_refresh: bool = False) -> dict[str, Any] | None:
             token, secret_key, algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
-    except ExpiredSignatureError:
-        return None
-    except InvalidTokenError:
-        return None
-    except Exception:
+    except PyJWTError:
         return None
