@@ -47,12 +47,24 @@ class PageService:
             "Content-Type": "application/json",
         }
 
+        logger.info("Sending request to Django URL: %s", url)
         try:
             response = await self.client.get(url, headers=headers, timeout=5.0)
             response.raise_for_status()
             django_data: dict[str, Any] = response.json()
 
         except HTTPStatusError as e:
+            logger.error(
+                "Django Integration HTTPStatusError!\n"
+                "Request Method: %s\n"
+                "Request URL: %s\n"
+                "Response Status: %s\n"
+                "Response Text: %s",
+                e.request.method,
+                e.request.url,
+                e.response.status_code,
+                e.response.text,
+            )
             raise DjangoIntegrationError(
                 f"Django error {e.response.status_code}: {e.response.text}"
             )
