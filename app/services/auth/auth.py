@@ -18,7 +18,7 @@ from app.core.security import (
 from app.models.role import Role, RoleModel
 from app.models.user import UserModel
 from app.schemas.auth import CreateUser, TokenInfo, UserLogin
-from app.services.exceptions import (
+from app.services.auth.exceptions import (
     DefaultRoleNotFoundError,
     InvalidCredentialsError,
     InvalidTokenError,

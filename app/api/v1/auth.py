@@ -7,8 +7,8 @@ from app.core.helpers.db_helper import get_async_psql_session
 from app.core.helpers.redis_helper import get_redis_client
 from app.models.user import UserModel
 from app.schemas.auth import CreateUser, TokenInfo, UserLogin, UserRefresh, UserSchema
-from app.services.auth import AuthService
-from app.services.exceptions import (
+from app.services.auth.auth import AuthService
+from app.services.auth.exceptions import (
     DefaultRoleNotFoundError,
     InvalidCredentialsError,
     InvalidTokenError,

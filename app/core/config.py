@@ -46,9 +46,13 @@ class DatabaseConfig(AppBaseSettings):
         return f"postgresql+psycopg_async://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
-class DjangoSettings(AppBaseSettings):
-    django_api_url: str = "http://127.0.0.1:8000/api/pages/"
-    internal_secret_key: str = ""
+class DjangoConfig(AppBaseSettings):
+    api_url: str = "http://127.0.0.1:8000/api/pages/"
+    internal_secret_key: str = "internal_secret_key"
+
+    model_config = SettingsConfigDict(
+        env_prefix="DJANGO_",
+    )
 
 
 class Settings(AppBaseSettings):
@@ -60,6 +64,7 @@ class Settings(AppBaseSettings):
 
     redis: RedisConfig = Field(default_factory=RedisConfig)
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    django: DjangoConfig = Field(default_factory=DjangoConfig)
 
 
 settings = Settings()

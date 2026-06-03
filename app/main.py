@@ -5,11 +5,12 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.page import router as pages_router
 from app.core.exceptions.handlers import auth_exception_handler
 from app.core.helpers.db_helper import db_helper
 from app.core.helpers.httpx_helper import httpx_helper
 from app.core.helpers.redis_helper import redis_helper
-from app.services.exceptions import AuthError
+from app.services.auth.exceptions import AuthError
 
 
 @asynccontextmanager
@@ -27,6 +28,7 @@ app = FastAPI(title="Geoapp_FastAPI", lifespan=lifespan)
 app.add_exception_handler(AuthError, auth_exception_handler)  # type: ignore[arg-type]
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(pages_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)
