@@ -5,14 +5,20 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.api.v1.auth import router as auth_router
-from app.core.db_helper import db_helper
 from app.core.exceptions.handlers import auth_exception_handler
+from app.core.helpers.db_helper import db_helper
+from app.core.helpers.httpx_helper import httpx_helper
+from app.core.helpers.redis_helper import redis_helper
 from app.services.exceptions import AuthError
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    httpx_helper.init_client()
+    redis_helper.init_client()
     yield
+    await redis_helper.close_client()
+    await httpx_helper.close_client()
     await db_helper.engine.dispose()
 
 

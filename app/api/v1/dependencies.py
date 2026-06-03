@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import db_helper
+from app.core.helpers import db_helper
 from app.core.security import decode_token
 from app.models.user import UserModel
 from app.services.exceptions import (

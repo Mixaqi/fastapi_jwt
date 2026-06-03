@@ -3,8 +3,8 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import get_current_user
-from app.core.db_helper import get_async_psql_session
-from app.core.redis_helper import get_redis_client
+from app.core.helpers.db_helper import get_async_psql_session
+from app.core.helpers.redis_helper import get_redis_client
 from app.models.user import UserModel
 from app.schemas.auth import CreateUser, TokenInfo, UserLogin, UserRefresh, UserSchema
 from app.services.auth import AuthService

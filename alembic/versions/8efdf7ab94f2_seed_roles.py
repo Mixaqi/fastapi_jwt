@@ -22,5 +22,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Очищаем таблицу ролей при откате."""
     op.execute("DELETE FROM roles WHERE title IN ('USER', 'STAFF', 'SUPERUSER');")

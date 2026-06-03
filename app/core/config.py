@@ -46,6 +46,11 @@ class DatabaseConfig(AppBaseSettings):
         return f"postgresql+psycopg_async://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
+class DjangoSettings(AppBaseSettings):
+    django_api_url: str = "http://127.0.0.1:8000/api/pages/"
+    internal_secret_key: str = ""
+
+
 class Settings(AppBaseSettings):
     JWT_SECRET_KEY: str = "jwt_secret_key"
     JWT_REFRESH_SECRET_KEY: str = "jwt_refresh_secret_key"
