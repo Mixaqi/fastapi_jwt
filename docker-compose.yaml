@@ -6,6 +6,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8001:8000"
+    networks:
+      - default
+      - shared_net
     entrypoint: "./entrypoint.sh"
     env_file:
       - .env.docker
@@ -56,3 +59,8 @@ volumes:
   postgres_data:
   redis_data:
   redisinsight_data:
+
+networks:
+  shared_net:
+    name: my_shared_network
+    external: true

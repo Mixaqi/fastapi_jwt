@@ -47,7 +47,7 @@ class DatabaseConfig(AppBaseSettings):
 
 
 class DjangoConfig(AppBaseSettings):
-    api_url: str = "http://127.0.0.1:8000/api/pages/"
+    api_url: str = "http://django:8000/api/pages/"
     internal_secret_key: str = "internal_secret_key"
 
     model_config = SettingsConfigDict(
