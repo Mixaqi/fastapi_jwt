@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.helpers.db_helper import db_helper
 from app.models.user_page_history import UserPageHistoryModel
 from app.services.page.exceptions import DjangoIntegrationError
 
@@ -23,23 +24,28 @@ class PageService:
         if not page_ids:
             return
 
-        try:
-            history_entries = [
-                UserPageHistoryModel(user_id=user_id, page_id=page_id)
-                for page_id in page_ids
-            ]
-            self.session.add_all(history_entries)
-            await self.session.commit()
+        async with db_helper.session_factory() as background_session:
+            try:
+                history_entries = [
+                    UserPageHistoryModel(user_id=user_id, page_id=page_id)
+                    for page_id in page_ids
+                ]
+                background_session.add_all(history_entries)
+                await background_session.commit()
 
-        except SQLAlchemyError as e:
-            await self.session.rollback()
-            logger.error("SQLAlchemy Error: %s", e)
+            except SQLAlchemyError as e:
+                await background_session.rollback()
+                logger.error("SQLAlchemy Error in background task: %s", e)
 
     async def get_pages_list_and_track_history(
-        self, user_id: int, background_tasks: BackgroundTasks
+        self,
+        user_id: int,
+        background_tasks: BackgroundTasks,
+        query_params: list[tuple[str, str]] | None = None,
     ) -> dict[str, Any]:
 
         url = settings.django.api_url
+        params: list[tuple[str, str]] = query_params or []
 
         headers = {
             "X-Internal-Secret": settings.django.internal_secret_key,
@@ -47,9 +53,14 @@ class PageService:
             "Content-Type": "application/json",
         }
 
-        logger.info("Sending request to Django URL: %s", url)
+        logger.info("Sending request to Django URL: %s with params %s", url, params)
         try:
-            response = await self.client.get(url, headers=headers, timeout=5.0)
+            response = await self.client.get(
+                url,
+                headers=headers,
+                params=params,  # type: ignore[arg-type]
+                timeout=5.0,
+            )
             response.raise_for_status()
             django_data: dict[str, Any] = response.json()
 
