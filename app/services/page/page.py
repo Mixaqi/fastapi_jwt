@@ -1,0 +1,96 @@
+import logging
+from typing import Any
+
+from fastapi import BackgroundTasks
+from httpx import AsyncClient, HTTPError, HTTPStatusError
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.core.helpers.db_helper import db_helper
+from app.models.user_page_history import UserPageHistoryModel
+from app.services.page.exceptions import DjangoIntegrationError
+
+
+logger = logging.getLogger(__name__)
+
+
+class PageService:
+    def __init__(self, client: AsyncClient, session: AsyncSession) -> None:
+        self.client = client
+        self.session = session
+
+    async def _log_user_pages_view(self, user_id: int, page_ids: list[int]) -> None:
+        if not page_ids:
+            return
+
+        async with db_helper.session_factory() as background_session:
+            try:
+                history_entries = [
+                    UserPageHistoryModel(user_id=user_id, page_id=page_id)
+                    for page_id in page_ids
+                ]
+                background_session.add_all(history_entries)
+                await background_session.commit()
+
+            except SQLAlchemyError as e:
+                await background_session.rollback()
+                logger.error("SQLAlchemy Error in background task: %s", e)
+
+    async def get_pages_list_and_track_history(
+        self,
+        user_id: int,
+        background_tasks: BackgroundTasks,
+        query_params: list[tuple[str, str]] | None = None,
+    ) -> dict[str, Any]:
+
+        url = settings.django.api_url
+        params: list[tuple[str, str]] = query_params or []
+
+        headers = {
+            "X-Internal-Secret": settings.django.internal_secret_key,
+            "X-User-Id": str(user_id),
+            "Content-Type": "application/json",
+        }
+
+        logger.info("Sending request to Django URL: %s with params %s", url, params)
+        try:
+            response = await self.client.get(
+                url,
+                headers=headers,
+                params=params,  # type: ignore[arg-type]
+                timeout=5.0,
+            )
+            response.raise_for_status()
+            django_data: dict[str, Any] = response.json()
+
+        except HTTPStatusError as e:
+            logger.error(
+                "Django Integration HTTPStatusError!\n"
+                "Request Method: %s\n"
+                "Request URL: %s\n"
+                "Response Status: %s\n"
+                "Response Text: %s",
+                e.request.method,
+                e.request.url,
+                e.response.status_code,
+                e.response.text,
+            )
+            raise DjangoIntegrationError(
+                f"Django error {e.response.status_code}: {e.response.text}"
+            )
+        except HTTPError as e:
+            raise DjangoIntegrationError(
+                f"Cannot connect with Django service: {str(e)}"
+            )
+
+        results: list[dict[str, Any]] = django_data.get("results", [])
+
+        page_ids: list[int] = [
+            item["id"] for item in results if isinstance(item, dict) and "id" in item
+        ]
+
+        if page_ids:
+            background_tasks.add_task(self._log_user_pages_view, user_id, page_ids)
+
+        return django_data

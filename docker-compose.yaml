@@ -1,57 +1,66 @@
 services:
   fastapi:
+    profiles: ["full"]
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: fastapi
     ports:
-      - "${FASTAPI_PORT}:8000"
+      - "8001:8000"
+    networks:
+      - default
+      - shared_net
+    entrypoint: "./entrypoint.sh"
     env_file:
-      - .env
+      - .env.docker
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
-    command:
-      [
-        "uv",
-        "run",
-        "uvicorn",
-        "app.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-        "--reload",
-      ]
 
   postgres:
     image: postgres:18.1
-    container_name: postgres
-    environment:
-      POSTGRES_DB: ${PG_NAME}
-      POSTGRES_USER: ${PG_USER}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
+    env_file: .env.docker
     ports:
-      - "${PG_PORT}:5432"
+        - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $${PG_USER} -d $${PG_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:8-alpine
-    container_name: redis
-    ports:
-      - "${REDIS_PORT}:6379"
+    env_file:
+      - .env.docker
     volumes:
       - redis_data:/data
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+  redis-insight:
+    image: redis/redisinsight:3.2
+    ports:
+      - "5541:5540"
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      - redis
+
 
 volumes:
   postgres_data:
   redis_data:
-  
+  redisinsight_data:
+
+networks:
+  shared_net:
+    name: my_shared_network
+    external: true
